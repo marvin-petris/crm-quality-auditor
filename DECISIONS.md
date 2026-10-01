@@ -12,7 +12,7 @@ décision change.
 avant ce projet.
 
 **Pourquoi.** Le but de ce projet, c'est de montrer que je sais coder. Si je le fais
-en N8N, ça prouve surtout que je sais faire du no-code — ce qui est exactement
+en N8N, ça prouve surtout que je sais faire du no-code, ce qui est exactement
 l'inverse de ce que je veux montrer. En plus, Python c'est le langage des postes que
 je vise, donc le temps passé à l'apprendre n'est pas du temps perdu, c'est un
 investissement direct.
@@ -23,20 +23,20 @@ en premier n'enverrait pas le bon signal.
 
 ---
 
-## 2026-08-31 | Les règles détectent, le LLM synthétise — jamais l'inverse
+## 2026-08-31 | Les règles détectent, le LLM synthétise, jamais l'inverse
 
 **Décision.** Toute la détection d'anomalies passe par des règles écrites en dur
 (email, âge, téléphone...). Le LLM ne sert qu'à regrouper et résumer ce que ces
-règles ont déjà trouvé — il ne détecte rien lui-même.
+règles ont déjà trouvé. Il ne détecte rien lui-même.
 
 **Pourquoi.** Un audit doit donner le même résultat à chaque fois sur les mêmes
 données, et je dois pouvoir expliquer pourquoi une ligne est signalée. Un LLM à qui
 on demande de repérer des anomalies ne va pas forcément trouver la même chose deux
 fois, et je ne peux pas garantir qu'il ne loupe rien. J'ai eu la preuve concrète du
-problème en testant : demandé au LLM de compter des anomalies par type à partir
-d'une liste, il a ajouté +1 à chaque catégorie, de façon cohérente mais fausse. Ça
-confirme que compter/détecter, ce n'est pas son rôle ici — la synthèse et la mise en
-forme, oui.
+problème en testant : quand j'ai demandé au LLM de compter des anomalies par type à
+partir d'une liste, il a ajouté +1 à chaque catégorie, de façon cohérente mais
+fausse. Ça confirme que compter et détecter, ce n'est pas son rôle ici. La synthèse
+et la mise en forme, oui.
 
 **Écarté.** Envoyer le CSV brut au LLM et lui demander de trouver les problèmes
 lui-même. Plus simple à coder, mais pas fiable, et invendable devant un client ou un
@@ -68,5 +68,35 @@ formaté...).
 **Pourquoi.** Je n'ai pas accès à de vraies données CRM pour l'instant, et même si
 j'en avais, je ne pourrais pas les utiliser pour un projet public (confidentialité).
 Inventer les données a un avantage en plus : je connais à l'avance les anomalies
-que j'ai mises, donc je peux vérifier que mon code les détecte toutes — ça sert de
+que j'ai mises, donc je peux vérifier que mon code les détecte toutes. Ça sert de
 test.
+
+---
+
+## 2026-10-01 | Aucune donnée client n'est envoyée au LLM
+
+**Décision.** Le LLM ne reçoit que des totaux : le nombre de clients traités, le
+nombre de clients invalides et le nombre d'anomalies par champ. Aucun nom, email,
+téléphone ou identifiant client ne part dans le prompt. Dans le rapport destiné à
+l'humain, les clients sont désignés par leur ID (colonne `ID` de l'export), pas par
+leur nom.
+
+**Pourquoi.** Même si les données sont fictives, je veux que l'outil respecte le
+RGPD comme s'il tournait sur de vraies données. Le RGPD impose de minimiser les
+données personnelles : on ne transmet que ce qui est nécessaire. Pour rédiger sa
+synthèse, le LLM n'a besoin que de savoir combien d'anomalies il y a et sur quels
+champs. Les données clients restent donc là où elles sont stockées. L'humain, lui,
+a besoin de savoir quel client corriger, d'où l'ID dans le rapport.
+
+**Écarté.**
+
+- Envoyer au LLM la liste des clients avec leur ID au lieu de leur nom. Ça ne règle
+  pas le problème : l'ID pseudonymise le client, mais il reste identifiable, donc
+  c'est toujours une donnée personnelle.
+- Demander au LLM, dans la consigne, de ne pas citer les noms. Ce n'est pas une
+  protection fiable, et même s'il ne les cite pas, il les a reçus. Les prompts
+  peuvent aussi être stockés dans des logs.
+- Générer l'ID dans le code à partir du numéro de ligne. Si l'export est trié
+  différemment entre deux exécutions, les ID changent et le rapport pointe vers le
+  mauvais client. Et un outil d'audit doit lire les données, pas les modifier :
+  attribuer les ID, c'est le rôle du CRM, pas de l'audit.
