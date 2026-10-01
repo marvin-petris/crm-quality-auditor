@@ -32,6 +32,7 @@ clients_invalide = []
 nb_anomalies_age = 0
 nb_anomalies_telephone = 0
 nb_anomalies_email = 0
+nb_clients_traites = 0
 
 with open("clients.csv", "r", encoding="utf-8") as fichier:
     lecteur = csv.DictReader(fichier)
@@ -48,9 +49,9 @@ with open("clients.csv", "r", encoding="utf-8") as fichier:
             nb_anomalies_telephone = nb_anomalies_telephone + 1
         if len(anomalies)>0:
             nb_client_invalide = nb_client_invalide + 1
-            print(client["nom"], "-> anomalies :", ", ".join(anomalies))
-            clients_invalide.append({"nom" : client["nom"], "anomalies" : ", ".join(anomalies)})
-    print(clients_invalide)
+            print(client["ID"], "-> anomalies :", ", ".join(anomalies))
+            clients_invalide.append({"ID" : client["ID"], "anomalies" : ", ".join(anomalies)})
+        nb_clients_traites = nb_clients_traites + 1
 
 if nb_client_invalide == 0:
     print("aucune anomalie détectée")
@@ -74,19 +75,17 @@ with open("rapport.md", "w", encoding="utf-8") as fichier:
     fichier.write(str(nb_anomalies_telephone) + "\n")
     fichier.write("Détails des clients concernés \n")
     for client in clients_invalide:
-        fichier.write("- " + client["nom"] + " : " + client["anomalies"] + "\n")
+        fichier.write("- " + client["ID"] + " : " + client["anomalies"] + "\n")
+
+resume = "un total de " + str(nb_clients_traites) + " clients ont été traités. Parmi eux, il y en a " + str(nb_client_invalide) + " qui sont invalides pour un total de " + str(nb_anomalies_age) + " anomalies d'âge, " + str(nb_anomalies_email) + " anomalies d'email, " + str(nb_anomalies_telephone) + " anomalies de téléphone."
+consigne = "Voici un resumé d'audit qualité CRM brut. Rédige-en une synthèse en 3-4 phrases pour un responsable non technique."
+question = consigne + " " + resume
+print(question)
+
+client_api = Anthropic()
 
 
-with open("rapport.md", "r", encoding="utf-8") as fichier:
-    contenu_rapport = fichier.read()
-
-consigne = "Voici un rapport d'audit qualité CRM brut. Rédige-en une synthèse en 3-4 phrases pour un responsable non technique. base tes chiffres sur les données du fichier afin de respecter les règles GDPR, ne communique jamais directement le noms des clients, utilise leurs identifiant à la places s'il y en a sinon n'inquique rien.\n\n"
-question = consigne + contenu_rapport
-
-client = Anthropic()
-
-
-reponse = client.messages.create(
+reponse = client_api.messages.create(
 model="claude-sonnet-4-6",
 max_tokens=2000,
 messages=[
